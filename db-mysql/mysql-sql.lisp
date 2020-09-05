@@ -32,7 +32,7 @@
     (loop
        (let ((field (mysql-fetch-field res-ptr)))
          (when (uffi:null-pointer-p field) (return))
-         (push (uffi:convert-from-cstring (clsql-mysql-field-name field)) names)))
+         (push (clsql-mysql-field-name field) names)))
     (nreverse names)))
 
 (defun make-type-list-for-auto (res-ptr)
@@ -286,17 +286,17 @@
                          :expression query-expression
                          :error-id (mysql-errno mysql-ptr)
                          :message (mysql-error-string mysql-ptr))))
-               (t 
-                (unwind-protect                           
+               (t
+                (unwind-protect
                      (progn (setf num-fields (mysql-num-fields res-ptr)
                                   result-types (canonicalize-types
-                                                result-types res-ptr)) 
+                                                result-types res-ptr))
                             (push (get-result-rows) results)
                             (push (when field-names
                                     (result-field-names res-ptr))
                                   results))
                   (mysql-free-result res-ptr))))))
-        
+
         (loop
           do (do-result-set)
           while (let ((next (mysql-next-result mysql-ptr)))

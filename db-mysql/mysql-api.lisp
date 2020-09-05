@@ -121,10 +121,35 @@
      :get-result
      :use-result))
 
+(uffi:def-struct mysql-field-struct
+  (name :cstring)
+  (org-name :pointer-void)
+  (table :pointer-void)
+  (org-table :pointer-void)
+  (db :pointer-void)
+  (catalog :pointer-void)
+  (def :pointer-void)
+  (length :unsigned-long)
+  (max-length :unsigned-long)
+  (name-length :unsigned-int)
+  (org-name-length :unsigned-int)
+  (table-length :unsigned-int)
+  (org-table-length :unsigned-int)
+  (db-length :unsigned-int)
+  (catalog-length :unsigned-int)
+  (def-length :unsigned-int)
+  (flags :unsigned-int)
+  (decimals :unsigned-int)
+  #-(and mysql-client-v4 (not mysql-client-v4.1))
+  (charsetnr :unsigned-int)
+  (type :unsigned-int)
+  #-(and mysql-client-v4 (not mysql-client-v4.1))
+  (extension :pointer-void))
+
 ;;; Opaque pointers to mysql C-defined structures
 (uffi:def-foreign-type mysql-mysql (* :void))
 (uffi:def-foreign-type mysql-mysql-res (* :void))
-(uffi:def-foreign-type mysql-field (* :void))
+(uffi:def-foreign-type mysql-field (* mysql-field-struct))
 (uffi:def-foreign-type mysql-bind (* :void))
 
 ;;;; The Foreign C routines
@@ -348,141 +373,22 @@
   :module "mysql"
   :returning :void)
 
-(declaim (inline clsql-mysql-num-rows))
-(uffi:def-function "clsql_mysql_num_rows"
-    ((res mysql-mysql-res)
-     (p-high32 (* :unsigned-int)))
-  :module "clsql-mysql"
-  :returning :unsigned-int)
+(declaim (inline mysql-num-rows))
+(uffi:def-function "mysql_num_rows"
+    ((res mysql-mysql-res))
+  :module "mysql"
+  :returning :unsigned-long-long)
 
 #+(or mysql-client-v4.1 mysql-client-v5)
 (uffi:def-foreign-type mysql-stmt-ptr :pointer-void)
 
-#+(or mysql-client-v4.1 mysql-client-v5)
-(uffi:def-function "mysql_stmt_init"
-    ((res mysql-mysql-res))
-  :module "clsql-mysql"
-  :returning mysql-stmt-ptr)
-
-#+(or mysql-client-v4.1 mysql-client-v5)
-(uffi:def-function "mysql_stmt_prepare"
-    ((stmt mysql-stmt-ptr)
-     (query :cstring)
-     (length :unsigned-long))
-  :module "clsql-mysql"
-  :returning :int)
-
-#+(or mysql-client-v4.1 mysql-client-v5)
-(uffi:def-function "mysql_stmt_param_count"
-    ((stmt mysql-stmt-ptr))
-  :module "clsql-mysql"
-  :returning :unsigned-int)
-
-#+(or mysql-client-v4.1 mysql-client-v5)
-(uffi:def-function "mysql_stmt_bind_param"
-    ((stmt mysql-stmt-ptr)
-     (bind mysql-bind))
-  :module "clsql-mysql"
-  :returning :short)
-
-#+(or mysql-client-v4.1 mysql-client-v5)
-(uffi:def-function "mysql_stmt_bind_result"
-    ((stmt mysql-stmt-ptr)
-     (bind mysql-bind))
-  :module "clsql-mysql"
-  :returning :short)
-
-#+(or mysql-client-v4.1 mysql-client-v5)
-(uffi:def-function "mysql_stmt_result_metadata"
-    ((stmt mysql-stmt-ptr))
-  :module "clsql-mysql"
-  :returning mysql-mysql-res)
-
-
-#+(or mysql-client-v4.1 mysql-client-v5)
-(uffi:def-function "mysql_stmt_execute"
-    ((stmt mysql-stmt-ptr))
-  :module "clsql-mysql"
-  :returning :int)
-
-#+(or mysql-client-v4.1 mysql-client-v5)
-(uffi:def-function "mysql_stmt_store_result"
-    ((stmt mysql-stmt-ptr))
-  :module "clsql-mysql"
-  :returning :int)
-
-#+(or mysql-client-v4.1 mysql-client-v5)
-(uffi:def-function "mysql_stmt_fetch"
-    ((stmt mysql-stmt-ptr))
-  :module "clsql-mysql"
-  :returning :int)
-
-#+(or mysql-client-v4.1 mysql-client-v5)
-(uffi:def-function "mysql_stmt_free_result"
-    ((stmt mysql-stmt-ptr))
-  :module "clsql-mysql"
-  :returning :short)
-
-#+(or mysql-client-v4.1 mysql-client-v5)
-(uffi:def-function "mysql_stmt_close"
-    ((stmt mysql-stmt-ptr))
-  :module "clsql-mysql"
-  :returning :short)
-
-#+(or mysql-client-v4.1 mysql-client-v5)
-(uffi:def-function "mysql_stmt_errno"
-    ((stmt mysql-stmt-ptr))
-  :module "clsql-mysql"
-  :returning :unsigned-int)
-
-#+(or mysql-client-v4.1 mysql-client-v5)
-(uffi:def-function "mysql_stmt_error"
-    ((stmt mysql-stmt-ptr))
-  :module "clsql-mysql"
-  :returning :cstring)
-
-
 ;;;; Equivalents of C Macro definitions for accessing various fields
 ;;;; in the internal MySQL Datastructures
 
-
-(declaim (inline mysql-num-rows))
-(defun mysql-num-rows (res)
-  (uffi:with-foreign-object (p-high32 :unsigned-int)
-    (let ((low32 (clsql-mysql-num-rows res p-high32))
-          (high32 (uffi:deref-pointer p-high32 :unsigned-int)))
-      (if (zerop high32)
-          low32
-        (make-64-bit-integer high32 low32)))))
-
-(uffi:def-function "clsql_mysql_affected_rows"
-    ((mysql mysql-mysql)
-     (p-high32 (* :unsigned-int)))
-  :returning :unsigned-int
-  :module "clsql-mysql")
-
-(defun mysql-affected-rows (mysql)
-  (uffi:with-foreign-object (p-high32 :unsigned-int)
-    (let ((low32 (clsql-mysql-affected-rows mysql p-high32))
-          (high32 (uffi:deref-pointer p-high32 :unsigned-int)))
-      (if (zerop high32)
-          low32
-        (make-64-bit-integer high32 low32)))))
-
-(uffi:def-function "clsql_mysql_insert_id"
-    ((res mysql-mysql)
-     (p-high32 (* :unsigned-int)))
-  :returning :unsigned-int
-  :module "clsql-mysql")
-
-(defun mysql-insert-id (mysql)
-  (uffi:with-foreign-object (p-high32 :unsigned-int)
-  (let ((low32 (clsql-mysql-insert-id mysql p-high32))
-        (high32 (uffi:deref-pointer p-high32 :unsigned-int)))
-    (if (zerop high32)
-        low32
-      (make-64-bit-integer high32 low32)))))
-
+(uffi:def-function "mysql_insert_id"
+    ((res mysql-mysql))
+  :returning :unsigned-long-long
+  :module "mysql")
 
 (declaim (inline mysql-num-fields))
 (uffi:def-function "mysql_num_fields"
@@ -528,32 +434,11 @@
 (defun mysql-info-string (mysql)
   (uffi:convert-from-cstring (mysql-info mysql)))
 
-(declaim (inline clsql-mysql-data-seek))
-(uffi:def-function "clsql_mysql_data_seek"
-  ((res mysql-mysql-res)
-   (offset-high32 :unsigned-int)
-   (offset-low32 :unsigned-int))
-  :module "clsql-mysql"
-  :returning :void)
+(defun clsql-mysql-field-name (res)
+  (uffi:get-slot-value res 'mysql-field-struct 'name))
 
-(declaim (inline clsql-mysql-field-name))
-(uffi:def-function "clsql_mysql_field_name"
-  ((res mysql-field))
-  :module "clsql-mysql"
-  :returning :cstring)
+(defun clsql-mysql-field-flags (res)
+  (uffi:get-slot-value res 'mysql-field-struct 'flags))
 
-(declaim (inline clsql-mysql-field-flags))
-(uffi:def-function "clsql_mysql_field_flags"
-  ((res mysql-field))
-  :module "clsql-mysql"
-  :returning :unsigned-int)
-
-(declaim (inline clsql-mysql-field-type))
-(uffi:def-function "clsql_mysql_field_type"
-  ((res mysql-field))
-  :module "clsql-mysql"
-  :returning :unsigned-int)
-
-(defun mysql-data-seek (res offset)
-  (multiple-value-bind (high32 low32) (split-64-bit-integer offset)
-    (clsql-mysql-data-seek res high32 low32)))
+(defun clsql-mysql-field-type (res)
+  (uffi:get-slot-value res 'mysql-field-struct 'type))
