@@ -32,8 +32,6 @@
   (when (and (stringp *mysql-client-info*)
              (plusp (length *mysql-client-info*)))
     (cond
-      ((eql (schar *mysql-client-info* 0) #\3)
-       (pushnew :mysql-client-v3 cl:*features*))
       ((eql (schar *mysql-client-info* 0) #\4)
        (pushnew :mysql-client-v4 cl:*features*)
        (when (and (>= (length *mysql-client-info*) 3)
@@ -48,4 +46,3 @@
        (pushnew :mysql-client-v6 cl:*features*))
       (t
        (error "Unknown mysql client version '~A'." *mysql-client-info*)))))
-

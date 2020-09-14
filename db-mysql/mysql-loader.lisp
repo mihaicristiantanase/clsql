@@ -16,10 +16,6 @@
 
 (in-package #:mysql)
 
-;; searches clsql_mysql64 to accomodate both 32-bit and 64-bit libraries on same system
-(defparameter *clsql-mysql-library-candidate-names*
-  `(,@(when (> most-positive-fixnum (expt 2 32)) (list "clsql_mysql64"))
-    "clsql_mysql"))
 
 (defvar *mysql-library-candidate-names*
   '("libmysqlclient" "libmysql"))
@@ -43,9 +39,6 @@ set to the right path before compiling or loading the system.")
                                               :module "mysql"
                                               :supporting-libraries *mysql-supporting-libraries*)
 
-    (clsql-uffi:find-and-load-foreign-library *clsql-mysql-library-candidate-names*
-                                              :module "clsql-mysql"
-                                              :supporting-libraries *mysql-supporting-libraries*)
     (setq *mysql-library-loaded* t)))
 
 (clsql-sys:database-type-load-foreign :mysql)

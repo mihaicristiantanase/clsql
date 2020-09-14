@@ -115,7 +115,6 @@
      #:mysql-debug
      #:mysql-num-rows
      #:mysql-num-fields
-     #:mysql-affected-rows
      #:mysql-insert-id
      #:mysql-eof
      #:mysql-error
@@ -123,8 +122,6 @@
      #:mysql-errno
      #:mysql-info
      #:mysql-info-string
-     #:mysql-data-seek
-
      #:mysql-time
      #:mysql-bind
      #:mysql-stmt-param-count

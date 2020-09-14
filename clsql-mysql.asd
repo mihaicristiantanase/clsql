@@ -26,49 +26,6 @@
                    (make-pathname :name nil :type nil
                                   :defaults *load-truename*)))
 
-(defclass clsql-mysql-source-file (c-source-file)
-  ())
-
-(defmethod output-files ((o compile-op) (c clsql-mysql-source-file))
-  (let* ((library-file-type
-	  (funcall (intern (symbol-name'#:default-foreign-library-type)
-			   (symbol-name '#:uffi))))
-         (found (some #'(lambda (dir)
-			    (probe-file (make-pathname :directory dir
-						       :name (component-name c)
-						       :type library-file-type)))
-			'((:absolute "usr" "lib" "clsql")))))
-    (list (if found
-	      found
-	      (make-pathname :name (component-name c)
-			     :type library-file-type
-			     :defaults *library-file-dir*)))))
-
-(defmethod perform ((o load-op) (c clsql-mysql-source-file))
-  t)
-
-(defmethod operation-done-p ((o load-op) (c clsql-mysql-source-file))
-  (and (find-package '#:mysql)
-       (symbol-function (intern (symbol-name '#:mysql-get-client-info)
-				(find-package '#:mysql)))
-       t))
-
-(defmethod perform ((o compile-op) (c clsql-mysql-source-file))
-  (unless (operation-done-p o c)
-    #-(or win32 win64 windows mswindows)
-    (unless (zerop (run-shell-command
-		    #-freebsd "cd ~A; make"
-		    #+freebsd "cd ~A; gmake"
-		    (namestring *library-file-dir*)))
-      (error 'operation-error :component c :operation o))))
-
-(defmethod operation-done-p ((o compile-op) (c clsql-mysql-source-file))
-  (or (and (probe-file #p"/usr/lib/clsql/clsql_mysql.so") t)
-      (let ((lib (make-pathname :defaults (component-pathname c)
-				:type (uffi:default-foreign-library-type))))
-	(and (probe-file lib) (probe-file (component-pathname c))
-	     (> (file-write-date lib) (file-write-date (component-pathname c)))))))
-
 ;;; System definition
 
 (defsystem :clsql-mysql
@@ -84,8 +41,7 @@
   ((:module :db-mysql
 	    :components
 	    ((:file "mysql-package")
-	     (:clsql-mysql-source-file "clsql_mysql" :depends-on ("mysql-package"))
-	     (:file "mysql-loader" :depends-on ("mysql-package" "clsql_mysql"))
+	     (:file "mysql-loader" :depends-on ("mysql-package"))
 	     (:file "mysql-client-info" :depends-on ("mysql-loader"))
 	     (:file "mysql-api" :depends-on ("mysql-client-info"))
 	     (:file "mysql-sql" :depends-on ("mysql-api"))
