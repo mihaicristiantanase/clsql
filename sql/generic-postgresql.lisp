@@ -53,7 +53,7 @@
      " AND (relowner=(SELECT usesysid FROM pg_user WHERE (usename='~A')))"
      owner))
    ((null owner)
-    (format nil " AND (relowner<>(SELECT usesysid FROM pg_user WHERE usename='postgres'))"))
+    (format nil " AND (relowner not in (SELECT usesysid FROM pg_user WHERE usename='postgres'))"))
    (t "")))
 
 (defun has-table (name database)
